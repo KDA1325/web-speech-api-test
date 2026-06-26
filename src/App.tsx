@@ -3,6 +3,7 @@ import {
   applyServerCommand,
   buildVoiceCommandRequest,
   getCommandApiConfiguredState,
+  getCommandRuntimeStatus,
   requestCommandServerStatus,
   requestVoiceCommandDecision
 } from "./commandApi";
@@ -55,7 +56,9 @@ export default function App() {
     "서버 명령 판단 결과를 기다리고 있습니다."
   );
 
+  const runtimeStatus = getCommandRuntimeStatus();
   const isCommandApiConfigured = getCommandApiConfiguredState() === "configured";
+  const isDirectMode = runtimeStatus.mode === "browser-direct-experiment";
   const supportTone = readiness.status === "available" ? "ok" : "warn";
 
   const sortedLog = useMemo(
@@ -68,6 +71,16 @@ export default function App() {
   }, []);
 
   async function refreshServerStatus() {
+    if (isDirectMode) {
+      setServerStatus(null);
+      setServerStatusMessage(
+        runtimeStatus.browserDirectApiKeyAssigned
+          ? "브라우저 direct 실험 모드입니다. API key 원문은 DevTools Network에서 노출됩니다."
+          : "브라우저 direct 실험 모드이지만 VITE_OPENAI_API_KEY가 설정되지 않았습니다."
+      );
+      return;
+    }
+
     if (!isCommandApiConfigured) {
       setServerStatus(null);
       setServerStatusMessage(
@@ -264,14 +277,28 @@ export default function App() {
           <h1>On-device STT to server command</h1>
         </div>
         <div className="api-pill">
-          <span>Command API</span>
-          <strong>{isCommandApiConfigured ? "configured" : "not configured"}</strong>
+          <span>LLM mode</span>
+          <strong>{runtimeStatus.mode}</strong>
           <small>
-            LLM key:{" "}
-            {serverStatus ? formatKeyStatus(serverStatus.llmApiKeyConfigured) : "unknown"}
+            key:{" "}
+            {isDirectMode
+              ? formatKeyStatus(runtimeStatus.browserDirectApiKeyAssigned)
+              : serverStatus
+                ? formatKeyStatus(serverStatus.llmApiKeyConfigured)
+                : "unknown"}
           </small>
         </div>
       </header>
+
+      {isDirectMode && (
+        <section className="danger-banner" role="alert">
+          <strong>Browser direct experiment mode</strong>
+          <span>
+            로컬 실험 전용입니다. OpenAI API key는 브라우저 DevTools Network에서
+            노출될 수 있습니다.
+          </span>
+        </section>
+      )}
 
       <section className="workspace">
         <div className="control-panel">
@@ -328,11 +355,26 @@ export default function App() {
               <StatusItem
                 label="LLM key"
                 value={
-                  serverStatus
-                    ? formatKeyStatus(serverStatus.llmApiKeyConfigured)
-                    : "unknown"
+                  isDirectMode
+                    ? formatKeyStatus(runtimeStatus.browserDirectApiKeyAssigned)
+                    : serverStatus
+                      ? formatKeyStatus(serverStatus.llmApiKeyConfigured)
+                      : "unknown"
                 }
-                tone={serverStatus?.llmApiKeyConfigured ? "ok" : "warn"}
+                tone={
+                  (
+                    isDirectMode
+                      ? runtimeStatus.browserDirectApiKeyAssigned
+                      : serverStatus?.llmApiKeyConfigured
+                  )
+                    ? "ok"
+                    : "warn"
+                }
+              />
+              <StatusItem
+                label="Mode"
+                value={runtimeStatus.mode}
+                tone={isDirectMode ? "warn" : "neutral"}
               />
             </div>
           </section>
