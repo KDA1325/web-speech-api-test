@@ -39,6 +39,12 @@ export interface VoiceCommandResponse {
   confidence: number | null;
 }
 
+export interface CommandServerStatusResponse {
+  ok: boolean;
+  llmApiKeyConfigured: boolean;
+  model: string | null;
+}
+
 export const ALLOWED_COMMANDS: AllowedCommand[] = [
   "move-left",
   "move-right",

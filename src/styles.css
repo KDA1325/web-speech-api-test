@@ -116,6 +116,12 @@ h2 {
   font-size: 0.9rem;
 }
 
+.api-pill small {
+  color: #66766f;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(340px, 0.9fr) minmax(420px, 1.1fr);

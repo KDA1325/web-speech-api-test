@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyServerCommand,
   buildVoiceCommandRequest,
+  validateCommandServerStatusResponse,
   validateVoiceCommandResponse
 } from "./commandApi";
 
@@ -67,6 +68,32 @@ describe("validateVoiceCommandResponse", () => {
         confidence: 0.5
       })
     ).toThrow("action");
+  });
+});
+
+describe("validateCommandServerStatusResponse", () => {
+  it("accepts boolean-only server LLM key status", () => {
+    expect(
+      validateCommandServerStatusResponse({
+        ok: true,
+        llmApiKeyConfigured: true,
+        model: "server-openai"
+      })
+    ).toEqual({
+      ok: true,
+      llmApiKeyConfigured: true,
+      model: "server-openai"
+    });
+  });
+
+  it("rejects responses that expose a raw API key instead of boolean status", () => {
+    expect(() =>
+      validateCommandServerStatusResponse({
+        ok: true,
+        llmApiKeyConfigured: "not-a-boolean",
+        model: "server-openai"
+      })
+    ).toThrow("llmApiKeyConfigured");
   });
 });
 

@@ -1,5 +1,6 @@
 import type {
   AllowedCommand,
+  CommandServerStatusResponse,
   TargetPosition,
   VoiceCommandRequest,
   VoiceCommandResponse
@@ -77,6 +78,52 @@ export async function requestVoiceCommandDecision(
   }
 }
 
+export async function requestCommandServerStatus(): Promise<CommandServerStatusResponse> {
+  const baseUrl = import.meta.env.VITE_COMMAND_API_URL;
+
+  if (!baseUrl) {
+    throw new CommandApiError("VITE_COMMAND_API_URL이 설정되지 않았습니다.");
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/voice-command/status`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new CommandApiError(
+        `서버 상태 API가 ${response.status} 상태를 반환했습니다.`
+      );
+    }
+
+    const payload = (await response.json()) as unknown;
+    return validateCommandServerStatusResponse(payload);
+  } catch (error) {
+    if (error instanceof CommandApiError) {
+      throw error;
+    }
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new CommandApiError("서버 상태 API 요청이 timeout 됐습니다.");
+    }
+
+    throw new CommandApiError(
+      error instanceof Error
+        ? error.message
+        : "서버 상태 API 요청 중 알 수 없는 오류가 발생했습니다."
+    );
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export function applyServerCommand(
   response: VoiceCommandResponse
 ): TargetPosition | null {
@@ -133,6 +180,36 @@ export function validateVoiceCommandResponse(
     reason,
     model,
     confidence
+  };
+}
+
+export function validateCommandServerStatusResponse(
+  payload: unknown
+): CommandServerStatusResponse {
+  if (!isRecord(payload)) {
+    throw new CommandApiError("서버 상태 응답이 객체가 아닙니다.");
+  }
+
+  const { ok, llmApiKeyConfigured, model } = payload;
+
+  if (typeof ok !== "boolean") {
+    throw new CommandApiError("서버 상태 응답의 ok가 boolean이 아닙니다.");
+  }
+
+  if (typeof llmApiKeyConfigured !== "boolean") {
+    throw new CommandApiError(
+      "서버 상태 응답의 llmApiKeyConfigured가 boolean이 아닙니다."
+    );
+  }
+
+  if (model !== null && typeof model !== "string") {
+    throw new CommandApiError("서버 상태 응답의 model이 string 또는 null이 아닙니다.");
+  }
+
+  return {
+    ok,
+    llmApiKeyConfigured,
+    model
   };
 }
 
