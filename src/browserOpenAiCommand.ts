@@ -3,17 +3,46 @@ import { ALLOWED_COMMANDS } from "./domain";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DIRECT_REQUEST_TIMEOUT_MS = 10000;
+const BROWSER_DIRECT_API_KEY_STORAGE_KEY = "orbit.browserDirectOpenAiApiKey";
 
 export function isBrowserDirectExperimentAllowed() {
-  return import.meta.env.VITE_ALLOW_BROWSER_LLM_DIRECT === "true";
+  return (
+    import.meta.env.VITE_ALLOW_BROWSER_LLM_DIRECT === "true" ||
+    Boolean(getBrowserDirectApiKey())
+  );
 }
 
 export function isBrowserDirectApiKeyAssigned() {
-  return Boolean(import.meta.env.VITE_OPENAI_API_KEY);
+  return Boolean(getBrowserDirectApiKey());
 }
 
 export function getBrowserDirectModel() {
   return import.meta.env.VITE_OPENAI_MODEL || "gpt-4.1-mini";
+}
+
+export function getBrowserDirectApiKey() {
+  return (
+    import.meta.env.VITE_OPENAI_API_KEY?.trim() ||
+    getStoredBrowserDirectApiKey()
+  );
+}
+
+export function setStoredBrowserDirectApiKey(apiKey: string) {
+  if (!hasLocalStorage()) {
+    return;
+  }
+
+  const trimmedApiKey = apiKey.trim();
+
+  if (trimmedApiKey) {
+    globalThis.localStorage.setItem(
+      BROWSER_DIRECT_API_KEY_STORAGE_KEY,
+      trimmedApiKey
+    );
+    return;
+  }
+
+  globalThis.localStorage.removeItem(BROWSER_DIRECT_API_KEY_STORAGE_KEY);
 }
 
 export async function requestBrowserDirectVoiceCommandDecision(
@@ -25,7 +54,7 @@ export async function requestBrowserDirectVoiceCommandDecision(
     );
   }
 
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const apiKey = getBrowserDirectApiKey();
 
   if (!apiKey) {
     throw new Error("VITE_OPENAI_API_KEY가 설정되지 않았습니다.");
@@ -171,4 +200,23 @@ export function extractResponseOutputText(payload: unknown): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function getStoredBrowserDirectApiKey() {
+  if (!hasLocalStorage()) {
+    return "";
+  }
+
+  return (
+    globalThis.localStorage.getItem(BROWSER_DIRECT_API_KEY_STORAGE_KEY)?.trim() ||
+    ""
+  );
+}
+
+function hasLocalStorage() {
+  try {
+    return typeof globalThis.localStorage !== "undefined";
+  } catch {
+    return false;
+  }
 }

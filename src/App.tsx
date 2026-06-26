@@ -7,6 +7,7 @@ import {
   requestCommandServerStatus,
   requestVoiceCommandDecision
 } from "./commandApi";
+import { setStoredBrowserDirectApiKey } from "./browserOpenAiCommand";
 import type {
   CommandServerStatusResponse,
   RecognitionEntry,
@@ -55,6 +56,9 @@ export default function App() {
   const [executionStatus, setExecutionStatus] = useState(
     "서버 명령 판단 결과를 기다리고 있습니다."
   );
+
+  const [directApiKeyInput, setDirectApiKeyInput] = useState("");
+  const [, setDirectApiKeyRevision] = useState(0);
 
   const runtimeStatus = getCommandRuntimeStatus();
   const isCommandApiConfigured = getCommandApiConfiguredState() === "configured";
@@ -107,6 +111,24 @@ export default function App() {
           : "서버 상태 확인 중 알 수 없는 오류가 발생했습니다."
       );
     }
+  }
+
+  function saveBrowserDirectApiKey() {
+    setStoredBrowserDirectApiKey(directApiKeyInput);
+    setDirectApiKeyInput("");
+    setDirectApiKeyRevision((revision) => revision + 1);
+    setServerStatus(null);
+    setServerStatusMessage(
+      "Browser direct mode is using the locally stored LLM API key."
+    );
+  }
+
+  function clearBrowserDirectApiKey() {
+    setStoredBrowserDirectApiKey("");
+    setDirectApiKeyInput("");
+    setDirectApiKeyRevision((revision) => revision + 1);
+    setLatestServerResponse(null);
+    setServerStatusMessage("Browser direct LLM API key was cleared.");
   }
 
   async function checkReadiness() {
@@ -302,6 +324,39 @@ export default function App() {
 
       <section className="workspace">
         <div className="control-panel">
+          <section className="panel">
+            <h2>Browser LLM Key</h2>
+            <div className="key-row">
+              <input
+                type="password"
+                value={directApiKeyInput}
+                placeholder="OpenAI API key"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setDirectApiKeyInput(event.target.value)}
+              />
+              <button
+                type="button"
+                onClick={saveBrowserDirectApiKey}
+                disabled={!directApiKeyInput.trim()}
+              >
+                Use key
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={clearBrowserDirectApiKey}
+                disabled={!runtimeStatus.browserDirectApiKeyAssigned}
+              >
+                Clear
+              </button>
+            </div>
+            <p className="notice warn">
+              Local experiment only. The key is stored in this browser and is
+              visible in DevTools Network requests.
+            </p>
+          </section>
+
           <section className="panel">
             <h2>Recognition</h2>
             <div className="button-row">

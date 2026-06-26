@@ -7,7 +7,10 @@ import {
   validateCommandServerStatusResponse,
   validateVoiceCommandResponse
 } from "./commandApi";
-import { extractResponseOutputText } from "./browserOpenAiCommand";
+import {
+  extractResponseOutputText,
+  setStoredBrowserDirectApiKey
+} from "./browserOpenAiCommand";
 
 describe("buildVoiceCommandRequest", () => {
   it("builds the server OpenAI command request contract", () => {
@@ -144,6 +147,7 @@ describe("buildCommandApiUrl", () => {
 describe("getCommandRuntimeStatus", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("defaults to server proxy mode", () => {
@@ -169,6 +173,42 @@ describe("getCommandRuntimeStatus", () => {
       browserDirectAllowed: true,
       browserDirectApiKeyAssigned: true,
       model: "gpt-test"
+    });
+  });
+
+  it("enables browser direct experiment mode with a locally stored key", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "");
+
+    const store = new Map<string, string>();
+    const localStorageMock: Storage = {
+      get length() {
+        return store.size;
+      },
+      clear() {
+        store.clear();
+      },
+      getItem(key) {
+        return store.get(key) ?? null;
+      },
+      key(index) {
+        return Array.from(store.keys())[index] ?? null;
+      },
+      removeItem(key) {
+        store.delete(key);
+      },
+      setItem(key, value) {
+        store.set(key, value);
+      }
+    };
+
+    vi.stubGlobal("localStorage", localStorageMock);
+    setStoredBrowserDirectApiKey("local-test-key");
+
+    expect(getCommandRuntimeStatus()).toMatchObject({
+      mode: "browser-direct-experiment",
+      commandApiConfigured: false,
+      browserDirectAllowed: true,
+      browserDirectApiKeyAssigned: true
     });
   });
 });

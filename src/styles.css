@@ -49,6 +49,22 @@ button.secondary:hover:not(:disabled) {
   background: #edf4f1;
 }
 
+input {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid #b7c8c2;
+  border-radius: 7px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #17201c;
+  font: inherit;
+}
+
+input:focus {
+  border-color: #1d5f53;
+  outline: 3px solid rgba(29, 95, 83, 0.18);
+}
+
 .app-shell {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -166,6 +182,12 @@ h2 {
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
 }
 
 .status-grid {
@@ -361,7 +383,8 @@ h2 {
 
 @media (max-width: 620px) {
   .status-grid,
-  .stage-footer {
+  .stage-footer,
+  .key-row {
     grid-template-columns: 1fr;
   }
 
