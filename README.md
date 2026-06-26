@@ -26,6 +26,14 @@ VITE_COMMAND_API_URL=https://your-command-api.example.com
 
 서버 LLM/OpenAI API key는 이 프론트엔드 `.env` 파일에 저장하지 않습니다. 특히 `VITE_` prefix가 붙은 env 값은 브라우저 번들에서 확인될 수 있으므로 secret으로 취급할 수 없습니다. 키 원문은 서버 런타임 환경에만 저장하고, 브라우저에는 키 할당 여부 boolean만 내려줍니다.
 
+`VITE_COMMAND_API_URL`에는 다음 값을 넣지 않습니다.
+
+- OpenAI/LLM API key
+- `https://api.openai.com/...` 같은 OpenAI 직접 API URL
+- `https://your-server.example.com/voice-command/interpret` 같은 endpoint 전체 URL
+
+올바른 값은 `https://your-server.example.com` 또는 `https://your-server.example.com/api` 같은 서버 base URL입니다. 클라이언트가 `/voice-command/status`, `/voice-command/interpret`를 뒤에 붙입니다.
+
 ## 서버 API 계약
 
 ### 상태 확인
@@ -127,6 +135,20 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Troubleshooting
+
+### 명령 실행 시 404가 나는 경우
+
+LLM API key가 맞아도 404가 날 수 있습니다. 404는 보통 인증 문제가 아니라 프론트가 호출한 서버 route가 없다는 뜻입니다.
+
+확인할 것:
+
+- `VITE_COMMAND_API_URL`에 API key를 넣지 않았는지
+- `VITE_COMMAND_API_URL`이 `http://` 또는 `https://`로 시작하는 서버 base URL인지
+- `VITE_COMMAND_API_URL`에 `/voice-command/interpret`를 이미 붙이지 않았는지
+- 해당 서버가 실제로 `GET /voice-command/status`와 `POST /voice-command/interpret`를 구현했는지
+- 브라우저가 OpenAI API를 직접 호출하도록 설정하지 않았는지
 
 ## 주의사항
 

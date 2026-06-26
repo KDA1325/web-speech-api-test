@@ -28,6 +28,7 @@ This repository validates whether orbit can use low-latency on-device STT during
 - Do not add Sherpa ONNX in this repository.
 - Do not expose an OpenAI API key in the browser.
 - Do not put server LLM/OpenAI API keys in frontend `.env` files, especially not with a `VITE_` prefix.
+- `VITE_COMMAND_API_URL` must be an absolute backend base URL. It must not be an API key, an OpenAI API URL, or a full `/voice-command/interpret` endpoint URL.
 - Do not render raw env values in the UI. Show only configured/not configured status.
 - Server LLM key status must be fetched from a server endpoint as a boolean only.
 - Do not decide commands with local regex/rule-based parsing as the source of truth.
@@ -250,6 +251,9 @@ Purpose:
 Required behavior:
 
 - Use `VITE_COMMAND_API_URL` as the backend base URL.
+- Reject values that are not absolute `http://` or `https://` URLs.
+- Reject direct OpenAI API hosts.
+- Reject full endpoint URLs because the client appends `/voice-command/status`.
 - GET `/voice-command/status`.
 - Accept only the `CommandServerStatusResponse` shape.
 - Display only assigned/not assigned/unknown in the UI.

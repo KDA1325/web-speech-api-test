@@ -8,6 +8,8 @@ import type {
 import { ALLOWED_COMMANDS, DEFAULT_DISTANCE_PX, SPEECH_LANGUAGE } from "./domain";
 
 const REQUEST_TIMEOUT_MS = 8000;
+const COMMAND_INTERPRET_PATH = "/voice-command/interpret";
+const COMMAND_STATUS_PATH = "/voice-command/status";
 
 export class CommandApiError extends Error {
   constructor(message: string) {
@@ -32,17 +34,13 @@ export function buildVoiceCommandRequest(
 export async function requestVoiceCommandDecision(
   request: VoiceCommandRequest
 ): Promise<VoiceCommandResponse> {
-  const baseUrl = import.meta.env.VITE_COMMAND_API_URL;
-
-  if (!baseUrl) {
-    throw new CommandApiError("VITE_COMMAND_API_URL이 설정되지 않았습니다.");
-  }
+  const endpointUrl = buildCommandApiUrl(COMMAND_INTERPRET_PATH);
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/voice-command/interpret`, {
+    const response = await fetch(endpointUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -79,17 +77,13 @@ export async function requestVoiceCommandDecision(
 }
 
 export async function requestCommandServerStatus(): Promise<CommandServerStatusResponse> {
-  const baseUrl = import.meta.env.VITE_COMMAND_API_URL;
-
-  if (!baseUrl) {
-    throw new CommandApiError("VITE_COMMAND_API_URL이 설정되지 않았습니다.");
-  }
+  const endpointUrl = buildCommandApiUrl(COMMAND_STATUS_PATH);
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/voice-command/status`, {
+    const response = await fetch(endpointUrl, {
       method: "GET",
       headers: {
         Accept: "application/json"
@@ -122,6 +116,57 @@ export async function requestCommandServerStatus(): Promise<CommandServerStatusR
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+export function getCommandApiConfiguredState(): "configured" | "not configured" {
+  return import.meta.env.VITE_COMMAND_API_URL ? "configured" : "not configured";
+}
+
+export function buildCommandApiUrl(path: string): string {
+  const baseUrl = import.meta.env.VITE_COMMAND_API_URL?.trim();
+
+  if (!baseUrl) {
+    throw new CommandApiError("VITE_COMMAND_API_URL이 설정되지 않았습니다.");
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(baseUrl);
+  } catch {
+    throw new CommandApiError(
+      "VITE_COMMAND_API_URL은 http:// 또는 https://로 시작하는 서버 base URL이어야 합니다. API key를 넣으면 안 됩니다."
+    );
+  }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new CommandApiError(
+      "VITE_COMMAND_API_URL은 http:// 또는 https:// 서버 base URL이어야 합니다."
+    );
+  }
+
+  if (parsedUrl.hostname === "api.openai.com" || parsedUrl.hostname.endsWith(".openai.com")) {
+    throw new CommandApiError(
+      "브라우저에서 OpenAI API를 직접 호출할 수 없습니다. VITE_COMMAND_API_URL에는 서버 API base URL을 넣어야 합니다."
+    );
+  }
+
+  const normalizedBasePath = parsedUrl.pathname.replace(/\/$/, "");
+
+  if (
+    normalizedBasePath.endsWith(COMMAND_INTERPRET_PATH) ||
+    normalizedBasePath.endsWith(COMMAND_STATUS_PATH)
+  ) {
+    throw new CommandApiError(
+      "VITE_COMMAND_API_URL에는 endpoint 전체가 아니라 서버 base URL만 넣어야 합니다."
+    );
+  }
+
+  parsedUrl.pathname = `${normalizedBasePath}${path}`;
+  parsedUrl.search = "";
+  parsedUrl.hash = "";
+
+  return parsedUrl.toString();
 }
 
 export function applyServerCommand(
