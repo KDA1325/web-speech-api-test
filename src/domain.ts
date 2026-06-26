@@ -8,6 +8,8 @@ export type AllowedCommand =
 
 export type ServerAction = AllowedCommand | "noop";
 
+export type CommandDecisionMode = "server-proxy" | "browser-direct-experiment";
+
 export interface TargetPosition {
   x: number;
   y: number;
@@ -43,6 +45,14 @@ export interface CommandServerStatusResponse {
   ok: boolean;
   llmApiKeyConfigured: boolean;
   model: string | null;
+}
+
+export interface CommandRuntimeStatus {
+  mode: CommandDecisionMode;
+  commandApiConfigured: boolean;
+  browserDirectAllowed: boolean;
+  browserDirectApiKeyAssigned: boolean;
+  model: string;
 }
 
 export const ALLOWED_COMMANDS: AllowedCommand[] = [

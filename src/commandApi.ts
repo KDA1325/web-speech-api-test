@@ -1,11 +1,18 @@
 import type {
   AllowedCommand,
   CommandServerStatusResponse,
+  CommandRuntimeStatus,
   TargetPosition,
   VoiceCommandRequest,
   VoiceCommandResponse
 } from "./domain";
 import { ALLOWED_COMMANDS, DEFAULT_DISTANCE_PX, SPEECH_LANGUAGE } from "./domain";
+import {
+  getBrowserDirectModel,
+  isBrowserDirectApiKeyAssigned,
+  isBrowserDirectExperimentAllowed,
+  requestBrowserDirectVoiceCommandDecision
+} from "./browserOpenAiCommand";
 
 const REQUEST_TIMEOUT_MS = 8000;
 const COMMAND_INTERPRET_PATH = "/voice-command/interpret";
@@ -34,6 +41,11 @@ export function buildVoiceCommandRequest(
 export async function requestVoiceCommandDecision(
   request: VoiceCommandRequest
 ): Promise<VoiceCommandResponse> {
+  if (isBrowserDirectExperimentAllowed()) {
+    const response = await requestBrowserDirectVoiceCommandDecision(request);
+    return validateVoiceCommandResponse(response);
+  }
+
   const endpointUrl = buildCommandApiUrl(COMMAND_INTERPRET_PATH);
 
   const controller = new AbortController();
@@ -120,6 +132,18 @@ export async function requestCommandServerStatus(): Promise<CommandServerStatusR
 
 export function getCommandApiConfiguredState(): "configured" | "not configured" {
   return import.meta.env.VITE_COMMAND_API_URL ? "configured" : "not configured";
+}
+
+export function getCommandRuntimeStatus(): CommandRuntimeStatus {
+  const browserDirectAllowed = isBrowserDirectExperimentAllowed();
+
+  return {
+    mode: browserDirectAllowed ? "browser-direct-experiment" : "server-proxy",
+    commandApiConfigured: Boolean(import.meta.env.VITE_COMMAND_API_URL),
+    browserDirectAllowed,
+    browserDirectApiKeyAssigned: isBrowserDirectApiKeyAssigned(),
+    model: browserDirectAllowed ? getBrowserDirectModel() : "server-openai"
+  };
 }
 
 export function buildCommandApiUrl(path: string): string {

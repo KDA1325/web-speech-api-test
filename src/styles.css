@@ -122,6 +122,25 @@ h2 {
   font-weight: 700;
 }
 
+.danger-banner {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #d58c74;
+  border-radius: 8px;
+  background: #fff1ec;
+  color: #4c1f13;
+}
+
+.danger-banner strong {
+  font-size: 0.94rem;
+}
+
+.danger-banner span {
+  line-height: 1.5;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(340px, 0.9fr) minmax(420px, 1.1fr);

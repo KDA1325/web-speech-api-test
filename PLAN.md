@@ -64,6 +64,8 @@
 - `VITE_COMMAND_API_URL`은 `http://` 또는 `https://`로 시작하는 서버 base URL이어야 하며, API key, OpenAI 직접 URL, endpoint 전체 URL을 넣으면 안 된다.
 - UI에는 raw env 값이나 raw API key를 표시하지 않는다. API base URL은 configured/not configured로만 표시한다.
 - 서버 LLM key 할당 여부는 서버 상태 API가 boolean으로만 내려주며, 클라이언트는 assigned/not assigned/unknown만 표시한다.
+- 로컬 실험만을 위해 `VITE_ALLOW_BROWSER_LLM_DIRECT=true` direct mode를 허용한다. 이 모드는 OpenAI API key가 브라우저 DevTools에서 노출될 수 있음을 UI와 README에 명시한다.
+- direct mode의 `VITE_OPENAI_API_KEY`는 실험 전용 key만 사용하며 배포/공유 데모/운영에는 사용하지 않는다.
 
 ## API Contract
 

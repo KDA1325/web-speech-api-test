@@ -29,6 +29,8 @@ This repository validates whether orbit can use low-latency on-device STT during
 - Do not expose an OpenAI API key in the browser.
 - Do not put server LLM/OpenAI API keys in frontend `.env` files, especially not with a `VITE_` prefix.
 - `VITE_COMMAND_API_URL` must be an absolute backend base URL. It must not be an API key, an OpenAI API URL, or a full `/voice-command/interpret` endpoint URL.
+- Exception: local-only browser direct experiment mode may be enabled with `VITE_ALLOW_BROWSER_LLM_DIRECT=true` and `VITE_OPENAI_API_KEY`, but the UI and README must clearly state that the key is visible in DevTools and must be a disposable experiment key.
+- Browser direct mode must never be described as safe, hidden, or deployment-ready.
 - Do not render raw env values in the UI. Show only configured/not configured status.
 - Server LLM key status must be fetched from a server endpoint as a boolean only.
 - Do not decide commands with local regex/rule-based parsing as the source of truth.
@@ -73,6 +75,7 @@ The app must render a single-page test console with:
 - Latest STT confidence
 - Server command API configured/not configured status
 - Server LLM API key assigned/not assigned status
+- Browser direct experiment mode warning when enabled
 - Latest server command response
 - Recognition log list
 - Movable target text element

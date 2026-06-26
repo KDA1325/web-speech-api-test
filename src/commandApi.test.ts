@@ -3,9 +3,11 @@ import {
   applyServerCommand,
   buildCommandApiUrl,
   buildVoiceCommandRequest,
+  getCommandRuntimeStatus,
   validateCommandServerStatusResponse,
   validateVoiceCommandResponse
 } from "./commandApi";
+import { extractResponseOutputText } from "./browserOpenAiCommand";
 
 describe("buildVoiceCommandRequest", () => {
   it("builds the server OpenAI command request contract", () => {
@@ -136,6 +138,64 @@ describe("buildCommandApiUrl", () => {
     expect(() => buildCommandApiUrl("/voice-command/interpret")).toThrow(
       "서버 base URL만"
     );
+  });
+});
+
+describe("getCommandRuntimeStatus", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("defaults to server proxy mode", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "https://command.example.com");
+
+    expect(getCommandRuntimeStatus()).toMatchObject({
+      mode: "server-proxy",
+      commandApiConfigured: true,
+      browserDirectAllowed: false,
+      browserDirectApiKeyAssigned: false
+    });
+  });
+
+  it("enables browser direct experiment mode only with the explicit flag", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "");
+    vi.stubEnv("VITE_ALLOW_BROWSER_LLM_DIRECT", "true");
+    vi.stubEnv("VITE_OPENAI_API_KEY", "test-key");
+    vi.stubEnv("VITE_OPENAI_MODEL", "gpt-test");
+
+    expect(getCommandRuntimeStatus()).toEqual({
+      mode: "browser-direct-experiment",
+      commandApiConfigured: false,
+      browserDirectAllowed: true,
+      browserDirectApiKeyAssigned: true,
+      model: "gpt-test"
+    });
+  });
+});
+
+describe("extractResponseOutputText", () => {
+  it("extracts output_text from OpenAI Responses API payloads", () => {
+    expect(
+      extractResponseOutputText({
+        output_text: "{\"matched\":false}"
+      })
+    ).toBe("{\"matched\":false}");
+  });
+
+  it("extracts nested output content text", () => {
+    expect(
+      extractResponseOutputText({
+        output: [
+          {
+            content: [
+              {
+                text: "{\"matched\":true}"
+              }
+            ]
+          }
+        ]
+      })
+    ).toBe("{\"matched\":true}");
   });
 });
 
