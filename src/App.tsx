@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyServerCommand,
   buildVoiceCommandRequest,
+  getCommandApiConfiguredState,
   requestCommandServerStatus,
   requestVoiceCommandDecision
 } from "./commandApi";
@@ -54,7 +55,7 @@ export default function App() {
     "서버 명령 판단 결과를 기다리고 있습니다."
   );
 
-  const isCommandApiConfigured = Boolean(import.meta.env.VITE_COMMAND_API_URL);
+  const isCommandApiConfigured = getCommandApiConfiguredState() === "configured";
   const supportTone = readiness.status === "available" ? "ok" : "warn";
 
   const sortedLog = useMemo(

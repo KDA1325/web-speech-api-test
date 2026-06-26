@@ -61,6 +61,7 @@
 - 서버가 `noop` 또는 `unknown`을 반환하면 클라이언트는 요소를 이동시키지 않고 상태 메시지만 표시한다.
 - 서버 API base URL은 `VITE_COMMAND_API_URL` 환경변수로 주입한다. 이 값은 secret이 아니어야 한다.
 - 서버 LLM/OpenAI API key는 프론트엔드 `.env`에 넣지 않는다. 특히 `VITE_` prefix가 붙은 env에는 secret을 절대 넣지 않는다.
+- `VITE_COMMAND_API_URL`은 `http://` 또는 `https://`로 시작하는 서버 base URL이어야 하며, API key, OpenAI 직접 URL, endpoint 전체 URL을 넣으면 안 된다.
 - UI에는 raw env 값이나 raw API key를 표시하지 않는다. API base URL은 configured/not configured로만 표시한다.
 - 서버 LLM key 할당 여부는 서버 상태 API가 boolean으로만 내려주며, 클라이언트는 assigned/not assigned/unknown만 표시한다.
 

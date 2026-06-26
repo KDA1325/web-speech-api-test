@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyServerCommand,
+  buildCommandApiUrl,
   buildVoiceCommandRequest,
   validateCommandServerStatusResponse,
   validateVoiceCommandResponse
@@ -94,6 +95,47 @@ describe("validateCommandServerStatusResponse", () => {
         model: "server-openai"
       })
     ).toThrow("llmApiKeyConfigured");
+  });
+});
+
+describe("buildCommandApiUrl", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("builds backend endpoint URLs from a server base URL", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "https://command.example.com/api");
+
+    expect(buildCommandApiUrl("/voice-command/interpret")).toBe(
+      "https://command.example.com/api/voice-command/interpret"
+    );
+  });
+
+  it("rejects API-key-shaped values instead of treating them as relative paths", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "not-a-server-url");
+
+    expect(() => buildCommandApiUrl("/voice-command/interpret")).toThrow(
+      "서버 base URL"
+    );
+  });
+
+  it("rejects direct OpenAI API URLs in the browser", () => {
+    vi.stubEnv("VITE_COMMAND_API_URL", "https://api.openai.com/v1");
+
+    expect(() => buildCommandApiUrl("/voice-command/interpret")).toThrow(
+      "OpenAI API를 직접 호출"
+    );
+  });
+
+  it("rejects endpoint URLs because the client appends the route", () => {
+    vi.stubEnv(
+      "VITE_COMMAND_API_URL",
+      "https://command.example.com/voice-command/interpret"
+    );
+
+    expect(() => buildCommandApiUrl("/voice-command/interpret")).toThrow(
+      "서버 base URL만"
+    );
   });
 });
 
