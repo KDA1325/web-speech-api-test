@@ -16,15 +16,38 @@ npm install
 npm run dev
 ```
 
-서버 명령 판단 API 주소를 `.env`에 설정합니다.
+서버 명령 판단 API base URL을 `.env`에 설정합니다. 이 값은 secret이 아니어야 합니다.
 
 ```bash
 VITE_COMMAND_API_URL=https://your-command-api.example.com
 ```
 
-브라우저에는 OpenAI API key를 넣지 않습니다. `VITE_COMMAND_API_URL`은 OpenAI 모델을 호출하는 서버 API의 base URL입니다.
+브라우저에는 OpenAI/LLM API key를 넣지 않습니다. `VITE_COMMAND_API_URL`은 OpenAI 모델을 호출하는 서버 API의 base URL일 뿐입니다.
+
+서버 LLM/OpenAI API key는 이 프론트엔드 `.env` 파일에 저장하지 않습니다. 특히 `VITE_` prefix가 붙은 env 값은 브라우저 번들에서 확인될 수 있으므로 secret으로 취급할 수 없습니다. 키 원문은 서버 런타임 환경에만 저장하고, 브라우저에는 키 할당 여부 boolean만 내려줍니다.
 
 ## 서버 API 계약
+
+### 상태 확인
+
+클라이언트는 서버 LLM key 할당 여부를 확인할 때 raw key를 받지 않습니다.
+
+```http
+GET /voice-command/status
+Accept: application/json
+```
+
+```json
+{
+  "ok": true,
+  "llmApiKeyConfigured": true,
+  "model": "server-openai"
+}
+```
+
+UI에는 `assigned`, `not assigned`, `unknown`만 표시합니다.
+
+### 명령 판단
 
 클라이언트는 최종 STT 결과가 나오면 다음 요청을 보냅니다.
 
@@ -84,6 +107,7 @@ Content-Type: application/json
 - STT confidence가 제공되는 경우 화면에 표시된다.
 - final transcript가 서버 명령 판단 API로 전송된다.
 - 서버 응답 JSON이 화면에 표시된다.
+- 서버 LLM key 상태는 assigned/not assigned/unknown으로만 표시되고 raw key는 표시되지 않는다.
 - 서버가 matched move 응답을 반환할 때만 텍스트 요소가 이동한다.
 - 서버가 `noop`, 오류, timeout을 반환하면 텍스트 요소가 이동하지 않는다.
 
@@ -109,5 +133,7 @@ npm run build
 - 이 앱은 Chrome 전용 스파이크입니다.
 - 원격 STT fallback을 사용하지 않습니다.
 - 브라우저에서 OpenAI API를 직접 호출하지 않습니다.
+- 프론트엔드 `.env`에 서버 LLM/OpenAI API key를 저장하지 않습니다.
+- UI, console, source map, bundle에서 raw API key를 확인할 수 있는 구조를 만들지 않습니다.
 - 로컬 regex/rule 기반 명령 파서는 source of truth로 사용하지 않습니다.
 - PPT/PPTX, 캔버스 에디터, Konva/Fabric, Sherpa ONNX는 이 레포 범위가 아닙니다.

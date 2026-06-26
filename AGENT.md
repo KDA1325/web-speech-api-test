@@ -27,13 +27,16 @@ This repository validates whether orbit can use low-latency on-device STT during
   - `processLocally = true`
 - Do not add Sherpa ONNX in this repository.
 - Do not expose an OpenAI API key in the browser.
+- Do not put server LLM/OpenAI API keys in frontend `.env` files, especially not with a `VITE_` prefix.
+- Do not render raw env values in the UI. Show only configured/not configured status.
+- Server LLM key status must be fetched from a server endpoint as a boolean only.
 - Do not decide commands with local regex/rule-based parsing as the source of truth.
 - All command matching, allowed-command judgment, movement distance interpretation, and next-position decisions must come from the server OpenAI command API.
 - Do not implement a PPT canvas, PPTX import, image-object movement, or drag-and-drop editor here.
 - Move only one rendered text element on screen.
 - Display `transcript` and `confidence` values from recognition results whenever the browser provides them.
 - Display server command request/response status so latency and failure are observable.
-- Avoid hidden magic. STT mode, language pack status, API URL, and server decisions must be visible in the UI or logs.
+- Avoid hidden magic. STT mode, language pack status, API configured state, server LLM key assigned state, and server decisions must be visible in the UI or logs.
 
 ## Git Workflow Rules
 
@@ -67,7 +70,8 @@ The app must render a single-page test console with:
 - Interim transcript
 - Latest final transcript
 - Latest STT confidence
-- Server command API URL/status
+- Server command API configured/not configured status
+- Server LLM API key assigned/not assigned status
 - Latest server command response
 - Recognition log list
 - Movable target text element
@@ -123,6 +127,12 @@ export interface VoiceCommandResponse {
   model: string;
   confidence: number | null;
 }
+
+export interface CommandServerStatusResponse {
+  ok: boolean;
+  llmApiKeyConfigured: boolean;
+  model: string | null;
+}
 ```
 
 ## Server API Contract
@@ -171,6 +181,22 @@ No-op response:
 }
 ```
 
+### `GET /voice-command/status`
+
+The server must report whether the server-side LLM API key is assigned without exposing the key value.
+
+Response:
+
+```json
+{
+  "ok": true,
+  "llmApiKeyConfigured": true,
+  "model": "server-openai"
+}
+```
+
+The browser must display only assigned/not assigned/unknown. It must never display raw key text or raw secret env values.
+
 ## Required Functions
 
 ### `createSpeechRecognition(): SpeechRecognition | null`
@@ -214,6 +240,20 @@ Required behavior:
 - Parse and validate the response shape before applying it.
 - Surface network/model/API errors in the UI.
 - Do not infer a command locally when the server request fails.
+
+### `requestCommandServerStatus(): Promise<CommandServerStatusResponse>`
+
+Purpose:
+
+- Ask the server whether the server-side LLM API key is configured.
+
+Required behavior:
+
+- Use `VITE_COMMAND_API_URL` as the backend base URL.
+- GET `/voice-command/status`.
+- Accept only the `CommandServerStatusResponse` shape.
+- Display only assigned/not assigned/unknown in the UI.
+- Never accept, store, log, or display a raw API key.
 
 ### `applyServerCommand(response: VoiceCommandResponse): TargetPosition | null`
 

@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyServerCommand,
   buildVoiceCommandRequest,
+  requestCommandServerStatus,
   requestVoiceCommandDecision
 } from "./commandApi";
 import type {
+  CommandServerStatusResponse,
   RecognitionEntry,
   TargetPosition,
   VoiceCommandResponse
@@ -41,19 +43,57 @@ export default function App() {
   const [recognitionLog, setRecognitionLog] = useState<RecognitionEntry[]>([]);
   const [position, setPosition] = useState<TargetPosition>(INITIAL_POSITION);
   const [apiStatus, setApiStatus] = useState("대기 중");
+  const [serverStatus, setServerStatus] =
+    useState<CommandServerStatusResponse | null>(null);
+  const [serverStatusMessage, setServerStatusMessage] = useState(
+    "서버 상태를 아직 확인하지 않았습니다."
+  );
   const [latestServerResponse, setLatestServerResponse] =
     useState<VoiceCommandResponse | null>(null);
   const [executionStatus, setExecutionStatus] = useState(
     "서버 명령 판단 결과를 기다리고 있습니다."
   );
 
-  const commandApiUrl = import.meta.env.VITE_COMMAND_API_URL ?? "";
+  const isCommandApiConfigured = Boolean(import.meta.env.VITE_COMMAND_API_URL);
   const supportTone = readiness.status === "available" ? "ok" : "warn";
 
   const sortedLog = useMemo(
     () => recognitionLog.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [recognitionLog]
   );
+
+  useEffect(() => {
+    void refreshServerStatus();
+  }, []);
+
+  async function refreshServerStatus() {
+    if (!isCommandApiConfigured) {
+      setServerStatus(null);
+      setServerStatusMessage(
+        "Command API base URL이 설정되지 않아 서버 LLM 키 상태를 확인할 수 없습니다."
+      );
+      return;
+    }
+
+    setServerStatusMessage("서버 상태를 확인하고 있습니다.");
+
+    try {
+      const nextServerStatus = await requestCommandServerStatus();
+      setServerStatus(nextServerStatus);
+      setServerStatusMessage(
+        nextServerStatus.llmApiKeyConfigured
+          ? "서버에 LLM API 키가 할당되어 있습니다."
+          : "서버에 LLM API 키가 할당되어 있지 않습니다."
+      );
+    } catch (error) {
+      setServerStatus(null);
+      setServerStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "서버 상태 확인 중 알 수 없는 오류가 발생했습니다."
+      );
+    }
+  }
 
   async function checkReadiness() {
     setIsCheckingReadiness(true);
@@ -223,8 +263,12 @@ export default function App() {
           <h1>On-device STT to server command</h1>
         </div>
         <div className="api-pill">
-          <span>API</span>
-          <strong>{commandApiUrl || "not configured"}</strong>
+          <span>Command API</span>
+          <strong>{isCommandApiConfigured ? "configured" : "not configured"}</strong>
+          <small>
+            LLM key:{" "}
+            {serverStatus ? formatKeyStatus(serverStatus.llmApiKeyConfigured) : "unknown"}
+          </small>
         </div>
       </header>
 
@@ -280,11 +324,26 @@ export default function App() {
                 tone="neutral"
               />
               <StatusItem label="Server status" value={apiStatus} tone="neutral" />
+              <StatusItem
+                label="LLM key"
+                value={
+                  serverStatus
+                    ? formatKeyStatus(serverStatus.llmApiKeyConfigured)
+                    : "unknown"
+                }
+                tone={serverStatus?.llmApiKeyConfigured ? "ok" : "warn"}
+              />
             </div>
           </section>
 
           <section className="panel">
             <h2>Server Decision</h2>
+            <div className="button-row">
+              <button type="button" className="secondary" onClick={refreshServerStatus}>
+                서버 상태 확인
+              </button>
+            </div>
+            <p className="notice neutral">{serverStatusMessage}</p>
             <pre className="response-view">
               {latestServerResponse
                 ? JSON.stringify(latestServerResponse, null, 2)
@@ -371,4 +430,8 @@ function TranscriptBlock({ label, value }: { label: string; value: string }) {
 
 function formatConfidence(confidence: number | null) {
   return confidence === null ? "not provided" : confidence.toFixed(3);
+}
+
+function formatKeyStatus(isConfigured: boolean) {
+  return isConfigured ? "assigned" : "not assigned";
 }
